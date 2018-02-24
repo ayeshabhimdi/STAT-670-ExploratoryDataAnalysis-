@@ -1,0 +1,111 @@
+---
+title: "PS2"
+author: "Morgan Taylor, Caleb Donoho, Vaishnavi Srinivasan"
+date: "1/18/2018"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE)
+#install.packages("NHANES")
+```
+
+
+```{r}
+library(NHANES)
+library(ggplot2)
+library(tidyr)
+```
+
+```{r}
+Adults = subset(NHANES, Age >= 18)
+attach(Adults)
+```
+
+# Question 1  
+```{r}
+# Question 1
+# where alpha sets the transperency 
+ggplot(Adults,aes(x=Height, fill=Gender))+geom_density(alpha=.4) + labs(x="Heights",y="density",title="Density Plot: Height by gender") + theme(panel.background = element_blank(),axis.line = element_line(colour = "black"))
+
+ggplot(Adults,aes(x=Gender, y=Height, fill=Gender))+geom_boxplot()+theme(legend.position = "none",panel.background = element_blank(),axis.line = element_line(colour = "black")) +labs(title="Boxplot: Height by gender")
+# additive shift (162 and 175)
+# additive: same shape and spread, but different centers
+# about a 13 to 15 cm shift
+```
+
+```{r}
+Male = Height[Gender=="male"]
+Female = Height[Gender=="female"]
+qq.df =as.data.frame(qqplot(Male, Female,plot.it =FALSE))
+# abline is the line we get is male = female (if x=y)
+ggplot(qq.df,aes(x =x,y =y))+geom_point()+geom_abline()+labs(x="Male",y="Female",title="QQ Plot: Height by gender")+ theme(panel.background = element_blank(),axis.line = element_line(colour = "black"))
+```
+  
+Based on the density plot, boxplot and QQ plots shown above we can see that the distribution is well approximated by an additive shift. This is an additive shift because the two distributions (based on the density plot) have the same shape and spread, but different centers. In the QQ plot we also see that the data points are approximately parallel to the x=y line. The magnitude of the shift is approximately 13 to 15 cm.  
+  
+
+# Question 2  
+```{r}
+# Question 2
+# Do the same as you did in Question 1, but now with Weights instead of Heights
+ggplot(Adults,aes(x=Weight, fill=Gender))+geom_density(alpha=.4)+labs(x="Weights",y="density",title="Density Plot: Weight by gender")+ theme(panel.background = element_blank(),axis.line = element_line(colour = "black"))
+#ggplot(Adults,aes(x=Gender, y=Weight, fill=Gender))+geom_boxplot()+theme(legend.position = "none")+labs(title="Weight by gender")
+# Additive shift (female = 75lbs (looks 73) and male=89 lbs)
+# additive: same shape and spread, but different centers
+# mean(na.omit(Adults$Weight[Adults$Gender=="male"]))
+# about a 15 pound shift
+```
+
+```{r}
+# Question 2 Continued
+Male = Weight[Gender=="male"]
+Female = Weight[Gender=="female"]
+qq.df =as.data.frame(qqplot(Male, Female,plot.it =FALSE))
+ggplot(qq.df,aes(x =x,y =y))+geom_point()+geom_abline()+labs(x="Male",y="Female",title="QQ Plot: Weight by gender")+ theme(panel.background = element_blank(),axis.line = element_line(colour = "black"))
+```
+
+```{r}
+# Question 2 LOG Tranformation
+Male.log = log(Weight[Gender=="male"])
+Female.log = log(Weight[Gender=="female"])
+qq.df.log =as.data.frame(qqplot(Male.log, Female.log, plot.it =FALSE))
+ggplot(qq.df.log,aes(x =x,y =y))+geom_point()+geom_abline()+labs(x="Male",y="Female",title="Log Transformed QQ Plot: Weight by gender")+ theme(panel.background = element_blank(),axis.line = element_line(colour = "black"))
+```
+  
+  Based on the density, and intial QQ plot (without any transformation) we initially believed that these densities are characterized by an additive shift. However, because of the erratic behaviro seen in the QQ plot as we move towards higher values we wanted to see if a log transformation would alleviate this behavior. The log transformation did not yeild a more parallel, or less erratic relationship between the x=y line and our data. We will rely on our original, non-transformed QQ plot and density plot to conclude that the distribution is well approximated by an additive shift. This is an additive shift because the two distributions (based on the density plot) have the same shape and spread, but different centers. The magnitude of the shift is approximately 15 kg.  
+  
+
+
+# Question 3  
+```{r}
+# Question 3
+Adults.lm = lm(Height ~ Gender, data = Adults)
+
+# Fitted values, sorted and demeaned
+adults.fitted = sort(fitted.values(Adults.lm))-mean(fitted.values(Adults.lm))
+
+# Sorted Residuals
+adults.residual=sort(residuals(Adults.lm))
+
+# create a new dataframe with this information
+Adults.fit = data.frame(fitted =adults.fitted, residuals =adults.residual)
+Adults.fit.long = gather(Adults.fit,key=type,value=value,fitted:residuals)
+
+ggplot(Adults.fit.long,aes(sample=value))+stat_qq(distribution = 'qunif')+facet_grid(~type)+xlab("Quantiles of the Standard Uniform Distribution")+ylab("Values from the Model (cm)") + ggtitle("Residual-Fit Spread Plot for model predicting height from gender")
+```
+
+Varaince Captured by the Model has the below value:
+```{r}
+var(adults.fitted)/var(Height, na.rm = TRUE)
+# note that na.rm = True measn that any NAs will be ignored
+# we get 0.467
+# only 47% of the variance is captured by the model
+# since so little of the variance is captured when we just use Gender, it would be wise to include more variables when predicting height. 
+```
+
+Only 47% of the variance is captured by the model. Since so little of the variance is captured when we simply use Gender as an explantory variable, it would be wise to include more explanatory variables to capture this unexplained variance regarding heights. The limited robustness regarding the model's explanatory power leads us to conclude that this model is not good (though not terrrible). While we don't necessarily need to entirely discard this model and its results, we do need to recognize that the model is farily limited when it comes to predictions.  
+

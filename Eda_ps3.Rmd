@@ -1,0 +1,151 @@
+---
+title: "EDA_PS3_GROUP13"
+author: "Ayesha Bhimdiwala, Pulkit Maloo and Vaishnavi"
+date: "1/29/2018"
+output: pdf_document
+---
+
+```{r}
+library(ggplot2)
+library(NHANES)
+library(broom)
+```
+
+#INTRODUCTION
+###High systolic blood pressure is a strong predictor of heart attacks and strokes. We are trying to find a relationship of average systolic blood pressure with age, height, and weight respectively using the NHANES data which consists of the following variables:
+#### BPSysAve (the average of three measurements of systolic blood pressure)
+#### Age (in years; 80 or older is recorded as 80)
+#### Weight (in kilograms)
+#### Height (in centimeters)
+#### Gender (male or female)
+
+```{r}
+#View(NHANES)
+attach(NHANES)
+nhanes.data = data.frame(BPSysAve , Age, Height, Weight, Gender)
+colSums(is.na(nhanes.data))
+n = nrow(nhanes.data)
+```
+
+We have 1449 missing values of BPSysAve, 353 missing values of Height and 78 missing values of Weight.
+Since our dataset is large, we can ignore them.
+
+Let's try to find the relationship of average systolic blood pressure with age first
+
+#Section 01 - Relationship between Age vs Average Systolic Blood Pressure
+```{r echo=FALSE}
+
+males = subset(nhanes.data, Gender=="male")
+females = subset(nhanes.data, Gender=="female")
+
+detach(NHANES)
+attach(nhanes.data)
+ggplot(nhanes.data, aes(x = Age+runif(n, -0.5, 0.5), y = BPSysAve+runif(n, -0.5, 0.5), colour = Gender)) +
+  geom_point(size = 0.5, alpha = 0.7) + geom_smooth(method = "loess", method.args = list(degree = 1, family="symmetric" )) + 
+  labs(x = 'Age  (in years)', y = 'Systolic Blood Pressure', title = 'Average Systolic Blood Pressure by Age')
+
+#males vs residuals to check for trend
+detach(nhanes.data)
+attach(males)
+model_age.mal.lm = loess(BPSysAve ~ Age, data = males, degree=1)
+model_age.mal.lm.df = augment(model_age.mal.lm)
+
+ggplot(model_age.mal.lm.df, aes(x = Age+runif(nrow(model_age.mal.lm.df), -0.5, 0.5), y = .resid+runif(nrow(model_age.mal.lm.df), -0.5, 0.5))) + 
+  geom_point(size = 0.5, alpha = 0.7,color="blue") + 
+  geom_smooth(method = "loess", method.args = list(degree = 2, family="symmetric" )) + 
+  geom_abline(slope = 0, intercept = 0) +
+    labs(x = 'Age (in years)', y = 'Residuals', title = 'Residual Plot for Males')
+var(model_age.mal.lm.df$.fitted)/var(model_age.mal.lm.df$BPSysAve)
+
+detach(males)
+#females vs residuals to check for trend
+attach(females)
+model_age.fem.lm = loess(BPSysAve ~ Age, data = females, degree=1)
+model_age.lm.fem.df = augment(model_age.fem.lm)
+
+ggplot(model_age.lm.fem.df, aes(x = Age+runif(nrow(model_age.lm.fem.df), -0.5, 0.5), y = .resid+runif(nrow(model_age.lm.fem.df), -0.5, 0.5))) + geom_point(size = 0.5, alpha = 0.7, color="red") +
+  geom_smooth(method = "loess", method.args = list(degree = 2, family="symmetric" ), color = "red") + 
+  geom_abline(slope = 0, intercept = 0) +
+    labs(x = 'Age (in years)', y = 'Residuals', title = 'Residual Plot for Females')
+var(model_age.lm.fem.df$.fitted)/var(model_age.lm.fem.df$BPSysAve)
+
+detach(females)
+```
+Both the male and female heights are right-skewed with 353 missing values. Since, the data is right-skewed we took median of the heights to handle missing values. The data seems to be rounded, so we unround it by adding random noise.
+
+#Section 02 - Relationship between Height vs Average Systolic Blood Pressure
+
+```{r echo=FALSE}
+
+attach(nhanes.data)
+ggplot(nhanes.data, aes(x = Height+runif(n, -0.5,0.5), y = BPSysAve+runif(n, -0.5,0.5), colour = Gender)) +
+  geom_point(size = 0.5, alpha = 0.7) + geom_smooth(method = "loess", method.args = list(degree = 1, family="symmetric")) + 
+  labs(x = 'Height (in cms)', y = 'Systolic Blood Pressure', title = 'Average Systolic Blood Pressure by Height')
+
+#males vs residuals to check for trend
+detach(nhanes.data)
+attach(males)
+model_Height.lm.mal = loess(BPSysAve ~ Height, data = males, degree=1)
+model_Height.lm.mal.df = augment(model_Height.lm.mal)
+
+ggplot(model_Height.lm.mal.df, aes(x = Height+runif(nrow(model_Height.lm.mal.df),-0.5,0.5), y = .resid+runif(nrow(model_Height.lm.mal.df),-0.5,0.5))) + 
+  geom_point(size = 0.5, alpha = 0.7,color="blue") + 
+  geom_smooth(method = "loess", method.args = list(degree = 2, family="symmetric" )) + 
+  geom_abline(slope = 0, intercept = 0) +
+    labs(x = 'Height (in cms)', y = 'Residuals', title = 'Residual Plot for Males')
+var(model_Height.lm.mal.df$.fitted)/var(model_Height.lm.mal.df$BPSysAve)
+detach(males)
+#females vs residuals to check for trend
+attach(females)
+model_Height.lm.fem = loess(BPSysAve ~ Height, data = females, degree=1)
+model_Height.lm.fem.df = augment(model_Height.lm.fem)
+
+ggplot(model_Height.lm.fem.df, aes(x = Height+runif(nrow(model_Height.lm.fem.df),-0.5,0.5), y = .resid+runif(nrow(model_Height.lm.fem.df),-0.5,0.5))) + geom_point(size = 0.5, alpha = 0.7, color="red") +
+  geom_smooth(method = "loess", method.args = list(degree = 2, family="symmetric" ), color = "red") + 
+  geom_abline(slope = 0, intercept = 0) +
+    labs(x = 'Height (in cms)', y = 'Residuals', title = 'Residual Plot for Females')
+var(model_Height.lm.fem.df$.fitted)/var(model_Height.lm.fem.df$BPSysAve)
+detach(females)
+
+```
+Both the male and female weights are left-skewed with 78 missing values. Since, the data is right-skewed we took median of the weights to handle missing values. 
+7% variation for males
+
+
+#Section 03 - Relationship between Weight vs Average Systolic Blood Pressure
+
+```{r echo=FALSE}
+
+attach(nhanes.data)
+ggplot(nhanes.data, aes(x = Weight+runif(n, -0.5,0.5), y = BPSysAve+runif(n, -0.5,0.5), colour = Gender)) +
+  geom_point(size = 0.5, alpha = 0.7) + geom_smooth(method = "loess", method.args = list(degree = 1, family="symmetric" )) + 
+  labs(x = 'Weight (in kgs)', y = 'Systolic Blood Pressure', title = 'Average Systolic Blood Pressure by Weight')
+
+#males vs residuals to check for trend
+detach(nhanes.data)
+attach(males)
+model_Weight.mal.lm = loess(BPSysAve ~ Weight, data = males, degree=1)
+model_Weight.lm.mal.df = augment(model_Weight.mal.lm)
+
+ggplot(model_Weight.lm.mal.df, aes(x = Weight+runif(nrow(model_Weight.lm.mal.df),-0.5,0.5), y = .resid+runif(nrow(model_Weight.lm.mal.df),-0.5,0.5))) + 
+  geom_point(size = 0.5, alpha = 0.7,color="blue") + 
+  geom_smooth(method = "loess", method.args = list(degree = 2, family="symmetric" )) + 
+  geom_abline(slope = 0, intercept = 0) +
+    labs(x = 'Weight (in kgs)', y = 'Residuals', title = 'Residual Plot for Males')
+var(model_Weight.lm.mal.df$.fitted)/var(model_Weight.lm.mal.df$BPSysAve)
+
+detach(males)
+#females vs residuals to check for trend
+attach(females)
+model_Weight.fem.lm = loess(BPSysAve ~ Weight, data = females, degree=1)
+model_Weight.fem.lm.df = augment(model_Weight.fem.lm)
+
+ggplot(model_Weight.fem.lm.df, aes(x = Weight+runif(nrow(model_Weight.fem.lm.df),-0.5,0.5), y = .resid+runif(nrow(model_Weight.fem.lm.df),-0.5,0.5))) + geom_point(size = 0.5, alpha = 0.7, color="red") +
+  geom_smooth(method = "loess", method.args = list(degree = 2, family="symmetric" ), color = "red") + 
+  geom_abline(slope = 0, intercept = 0) +
+    labs(x = 'Weight (in kgs)', y = 'Residuals', title = 'Residual Plot for Females')
+var(model_Weight.fem.lm.df$.fitted)/var(model_Weight.fem.lm.df$BPSysAve)
+detach(females)
+```
+
+#CONCLUSION
